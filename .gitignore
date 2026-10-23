@@ -1,0 +1,23 @@
+# secrets
+.env
+
+# personal notes
+NOTES.md
+
+# local data / checkpoints
+data/
+checkpoints/
+*.parquet
+
+# build output
+build/
+target/
+.gradle/
+__pycache__/
+*.pyc
+.venv/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
