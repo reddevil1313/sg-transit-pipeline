@@ -37,6 +37,7 @@ docker compose up -d
 ```
 
 - HDFS NameNode UI: http://localhost:9870
+- Spark UI (bronze streaming job): http://localhost:4040
 - Kafka UI (optional): `docker compose --profile ui up -d`, then http://localhost:8090
 - Kafka from your host: `localhost:9092`; from other containers: `kafka:19092`
 
@@ -64,11 +65,19 @@ On every `docker compose up`, `reference-loader` downloads DataMall's `BusStops`
 
 To refresh without restarting the stack: `docker compose run --rm reference-loader`.
 
+## Bronze layer
+
+`spark-bronze` streams `bus.arrivals.raw` into `/lake/bronze/arrivals` every 5 minutes, partitioned by
+Singapore date and hour (`date=2026-10-23/hour=14/`). Each row keeps the raw DataMall JSON (`value`), the
+stop code, Kafka partition/offset/timestamp and `polled_at`. Progress is checkpointed in
+`/checkpoints/bronze`, so restarts neither lose nor duplicate rows.
+
 ## Tests
 
 ```bash
 cd producer && ./gradlew test
 docker compose run --rm --no-deps --entrypoint python reference-loader -m unittest
+docker compose run --rm --no-deps --entrypoint python3 spark-bronze -m unittest
 ```
 
 ## Status
@@ -76,7 +85,7 @@ docker compose run --rm --no-deps --entrypoint python reference-loader -m unitte
 - [x] Step 1: Kafka (KRaft) + topics + Kafka UI
 - [x] Step 2: DataMall producer
 - [x] Step 3: HDFS + reference data (bus stops, routes)
-- [ ] Step 4: Streaming ingest to the bronze layer
+- [x] Step 4: Streaming ingest to the bronze layer
 - [ ] Step 5: Cleaning and arrival inference (silver)
 - [ ] Step 6: Live bunching alerts
 - [ ] Step 7: Daily batch analytics (gold)

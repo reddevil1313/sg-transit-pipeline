@@ -30,12 +30,13 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_LOG_RETENTION_HOURS: 72
       KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
     volumes:
       - kafkadata:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      test: ["CMD", "bash", "-c", "</dev/tcp/localhost/9092"]
       interval: 10s
       timeout: 10s
       retries: 10
@@ -94,7 +95,7 @@ services:
     volumes:
       - namenode:/hadoop/dfs
     healthcheck:
-      test: ["CMD-SHELL", "hdfs dfsadmin -safemode get | grep -q OFF"]
+      test: ["CMD-SHELL", "curl -sf 'http://localhost:9870/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo' | grep -q '\"Safemode\" : \"\"'"]
       interval: 10s
       timeout: 30s
       retries: 20
@@ -124,6 +125,23 @@ services:
     environment:
       LTA_ACCOUNT_KEY: ${LTA_ACCOUNT_KEY}
       WEBHDFS_URL: http://namenode:9870/webhdfs/v1
+
+  spark-bronze:
+    build: ./streaming
+    image: sg-transit-spark
+    container_name: spark-bronze
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      hdfs-init:
+        condition: service_completed_successfully
+    command: ["/opt/spark/bin/spark-submit", "--master", "local[2]", "--driver-memory", "512m", "/app/bronze_ingest.py"]
+    ports:
+      - "4040:4040"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      HDFS_URL: hdfs://namenode:8020
+    restart: unless-stopped
 
 volumes:
   kafkadata:
