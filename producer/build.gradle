@@ -1,0 +1,30 @@
+plugins {
+    id 'application'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.kafka:kafka-clients:4.1.0'
+    implementation 'tools.jackson.core:jackson-databind:3.1.5'
+    implementation 'org.slf4j:slf4j-api:2.0.18'
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.18'
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.0.3'
+}
+
+application {
+    mainClass = 'sgtransit.producer.ArrivalProducer'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

@@ -39,10 +39,27 @@ docker compose up -d
 - Kafka UI: http://localhost:8090
 - Kafka from your host: `localhost:9092`; from other containers: `kafka:19092`
 
+## Monitored stops
+
+The producer polls the stops in `BUS_STOPS`. The default is a stretch of services 65 and 123 around
+stops 14031 and 14039 (both directions):
+
+```
+10379, 10369, 14039, 14029, 14379, 14031, 10361, 10371
+```
+
+To change it, set `BUS_STOPS` in `.env` (comma-separated 5-digit codes) and run `docker compose up -d producer`.
+
+## Producer tests
+
+```bash
+cd producer && ./gradlew test
+```
+
 ## Status
 
 - [x] Step 1: Kafka (KRaft) + topics + Kafka UI
-- [ ] Step 2: DataMall producer
+- [x] Step 2: DataMall producer
 - [ ] Step 3: HDFS + reference data (bus stops, routes)
 - [ ] Step 4: Streaming ingest to the bronze layer
 - [ ] Step 5: Cleaning and arrival inference (silver)

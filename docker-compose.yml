@@ -54,5 +54,17 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
 
+  producer:
+    build: ./producer
+    container_name: producer
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      LTA_ACCOUNT_KEY: ${LTA_ACCOUNT_KEY}
+      BUS_STOPS: ${BUS_STOPS:-10379,10369,14039,14029,14379,14031,10361,10371}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    restart: unless-stopped
+
 volumes:
   kafkadata:
