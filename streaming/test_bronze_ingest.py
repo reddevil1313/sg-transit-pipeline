@@ -49,11 +49,12 @@ class ToBronzeTest(unittest.TestCase):
         self.assertEqual((dt.date(2026, 10, 24), 0), (rows[1].date, rows[1].hour))
 
     def test_falls_back_to_kafka_timestamp_without_polled_at(self):
-        row = to_bronze(self.kafka_rows("not json")).collect()[0]
+        rows = to_bronze(self.kafka_rows("not json", '{"polled_at":"yesterday"}')).collect()
 
-        self.assertEqual("not json", row.value)
-        self.assertEqual(dt.datetime(2026, 10, 23, 1, 0, 0, tzinfo=UTC), row.polled_at.astimezone())
-        self.assertEqual((dt.date(2026, 10, 23), 9), (row.date, row.hour))
+        self.assertEqual("not json", rows[0].value)
+        for row in rows:
+            self.assertEqual(dt.datetime(2026, 10, 23, 1, 0, 0, tzinfo=UTC), row.polled_at.astimezone())
+            self.assertEqual((dt.date(2026, 10, 23), 9), (row.date, row.hour))
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ TOPIC = "bus.arrivals.raw"
 def to_bronze(kafka_df: DataFrame) -> DataFrame:
     value = F.col("value").cast("string")
     polled_at = F.coalesce(
-        F.get_json_object(value, "$.polled_at").cast("timestamp"),
+        F.try_to_timestamp(F.get_json_object(value, "$.polled_at")),
         F.col("timestamp"),
     )
     return kafka_df.select(
