@@ -1,9 +1,6 @@
 # secrets
 .env
 
-# personal notes
-NOTES.md
-
 # local data / checkpoints
 data/
 checkpoints/

@@ -36,7 +36,8 @@ cp .env.example .env        # add your LTA DataMall key
 docker compose up -d
 ```
 
-- Kafka UI: http://localhost:8090
+- HDFS NameNode UI: http://localhost:9870
+- Kafka UI (optional): `docker compose --profile ui up -d`, then http://localhost:8090
 - Kafka from your host: `localhost:9092`; from other containers: `kafka:19092`
 
 ## Monitored stops
@@ -50,17 +51,31 @@ stops 14031 and 14039 (both directions):
 
 To change it, set `BUS_STOPS` in `.env` (comma-separated 5-digit codes) and run `docker compose up -d producer`.
 
-## Producer tests
+## Reference data
+
+On every `docker compose up`, `reference-loader` downloads DataMall's `BusStops`, `BusRoutes` and
+`BusServices` and writes them to HDFS as Parquet:
+
+```
+/lake/reference/bus_stops/data.parquet
+/lake/reference/bus_routes/data.parquet
+/lake/reference/bus_services/data.parquet
+```
+
+To refresh without restarting the stack: `docker compose run --rm reference-loader`.
+
+## Tests
 
 ```bash
 cd producer && ./gradlew test
+docker compose run --rm --no-deps --entrypoint python reference-loader -m unittest
 ```
 
 ## Status
 
 - [x] Step 1: Kafka (KRaft) + topics + Kafka UI
 - [x] Step 2: DataMall producer
-- [ ] Step 3: HDFS + reference data (bus stops, routes)
+- [x] Step 3: HDFS + reference data (bus stops, routes)
 - [ ] Step 4: Streaming ingest to the bronze layer
 - [ ] Step 5: Cleaning and arrival inference (silver)
 - [ ] Step 6: Live bunching alerts

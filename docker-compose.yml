@@ -1,3 +1,15 @@
+x-hdfs: &hdfs
+  build: ./hdfs
+  image: sg-transit-hdfs
+  platform: linux/amd64
+  environment: &hdfs-env
+    CORE-SITE.XML_fs.defaultFS: hdfs://namenode:8020
+    HDFS-SITE.XML_dfs.replication: 1
+    HDFS-SITE.XML_dfs.permissions.enabled: "false"
+    HDFS-SITE.XML_dfs.namenode.name.dir: /hadoop/dfs/name
+    HDFS-SITE.XML_dfs.datanode.data.dir: /hadoop/dfs/data
+    HADOOP_HEAPSIZE_MAX: 256m
+
 services:
   kafka:
     image: apache/kafka:4.1.0
@@ -19,6 +31,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_LOG_RETENTION_HOURS: 72
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
     volumes:
       - kafkadata:/var/lib/kafka/data
     healthcheck:
@@ -45,6 +58,7 @@ services:
   kafka-ui:
     image: kafbat/kafka-ui:latest
     container_name: kafka-ui
+    profiles: [ui]
     depends_on:
       kafka:
         condition: service_healthy
@@ -64,7 +78,54 @@ services:
       LTA_ACCOUNT_KEY: ${LTA_ACCOUNT_KEY}
       BUS_STOPS: ${BUS_STOPS:-10379,10369,14039,14029,14379,14031,10361,10371}
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      JAVA_OPTS: -Xmx64m
     restart: unless-stopped
+
+  namenode:
+    <<: *hdfs
+    container_name: namenode
+    hostname: namenode
+    command: ["hdfs", "namenode"]
+    ports:
+      - "9870:9870"
+    environment:
+      <<: *hdfs-env
+      ENSURE_NAMENODE_DIR: /hadoop/dfs/name
+    volumes:
+      - namenode:/hadoop/dfs
+    healthcheck:
+      test: ["CMD-SHELL", "hdfs dfsadmin -safemode get | grep -q OFF"]
+      interval: 10s
+      timeout: 30s
+      retries: 20
+
+  datanode:
+    <<: *hdfs
+    container_name: datanode
+    hostname: datanode
+    command: ["hdfs", "datanode"]
+    depends_on:
+      - namenode
+    volumes:
+      - datanode:/hadoop/dfs
+
+  hdfs-init:
+    <<: *hdfs
+    depends_on:
+      namenode:
+        condition: service_healthy
+    command: ["hdfs", "dfs", "-mkdir", "-p", "/lake/reference", "/lake/bronze", "/lake/silver", "/lake/gold"]
+
+  reference-loader:
+    build: ./reference
+    depends_on:
+      hdfs-init:
+        condition: service_completed_successfully
+    environment:
+      LTA_ACCOUNT_KEY: ${LTA_ACCOUNT_KEY}
+      WEBHDFS_URL: http://namenode:9870/webhdfs/v1
 
 volumes:
   kafkadata:
+  namenode:
+  datanode:
