@@ -143,6 +143,23 @@ services:
       HDFS_URL: hdfs://namenode:8020
     restart: unless-stopped
 
+  spark-silver:
+    image: sg-transit-spark
+    container_name: spark-silver
+    depends_on:
+      spark-bronze:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          /opt/spark/bin/spark-submit --master local[2] --driver-memory 512m /app/silver.py
+          sleep 3600
+        done
+    environment:
+      HDFS_URL: hdfs://namenode:8020
+    restart: unless-stopped
+
 volumes:
   kafkadata:
   namenode:

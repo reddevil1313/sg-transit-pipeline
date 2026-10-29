@@ -72,12 +72,25 @@ Singapore date and hour (`date=2026-10-23/hour=14/`). Each row keeps the raw Dat
 stop code, Kafka partition/offset/timestamp and `polled_at`. Progress is checkpointed in
 `/checkpoints/bronze`, so restarts neither lose nor duplicate rows.
 
+## Silver layer
+
+`spark-silver` rebuilds yesterday and today from bronze every hour (a full overwrite of those date
+partitions, so reruns are safe):
+
+- `/lake/silver/predictions`: one row per stop × service × poll × bus slot, with typed ETA, lead time,
+  GPS/scheduled flag, position, load and bus type.
+- `/lake/silver/arrivals`: inferred bus arrivals. For each stop and service, consecutive polls are
+  compared to decide whether the queue of upcoming buses stayed, moved up by one or by two; buses that
+  left the front of the queue while due are recorded as arrivals (precision about ±1 poll, i.e. a minute).
+
+Run it now instead of waiting: `docker compose restart spark-silver`.
+
 ## Tests
 
 ```bash
 cd producer && ./gradlew test
 docker compose run --rm --no-deps --entrypoint python reference-loader -m unittest
-docker compose run --rm --no-deps --entrypoint python3 spark-bronze -m unittest
+docker compose run --rm --no-deps --entrypoint python3 spark-bronze -m unittest   # bronze + silver
 ```
 
 ## Status
@@ -86,7 +99,7 @@ docker compose run --rm --no-deps --entrypoint python3 spark-bronze -m unittest
 - [x] Step 2: DataMall producer
 - [x] Step 3: HDFS + reference data (bus stops, routes)
 - [x] Step 4: Streaming ingest to the bronze layer
-- [ ] Step 5: Cleaning and arrival inference (silver)
+- [x] Step 5: Cleaning and arrival inference (silver)
 - [ ] Step 6: Live bunching alerts
 - [ ] Step 7: Daily batch analytics (gold)
 - [ ] Step 8: Dashboard
